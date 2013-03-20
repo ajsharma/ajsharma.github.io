@@ -1,3 +1,8 @@
+---
+layout: default
+title: Getting Started with Jekyll and Github
+---
+
 ## tl:dr
 
 Jekyll does not like ruby 2.0.  The simple workaround is to go back to ruby 1.9.

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Getting Started with Jekyll and Github
+title: Getting Started with Jekyll and Github Pages
 ---
 
 ## tl:dr

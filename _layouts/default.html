@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>ajsharma.github.com by ajsharma</title>
+    <title>{{ page.title }}</title>
 
     <link rel="stylesheet" href="/stylesheets/styles.css">
     <link rel="stylesheet" href="/stylesheets/pygment_trac.css">
@@ -15,7 +15,7 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1>ajsharma.github.com</h1>
+        <h1>{{ page.title }}</h1>
         <p></p>
 
 
@@ -29,17 +29,19 @@
         <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
       </footer>
     </div>
+
     <script src="javascripts/scale.fix.js"></script>
-              <script type="text/javascript">
-            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
-            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
-          </script>
-          <script type="text/javascript">
-            try {
-              var pageTracker = _gat._getTracker("UA-39440617-1");
-            pageTracker._trackPageview();
-            } catch(err) {}
-          </script>
+    <script type="text/javascript">
+      var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+      document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+      try {
+        var pageTracker = _gat._getTracker("UA-39440617-1");
+        pageTracker._trackPageview();
+      } 
+      catch(err) {}
+    </script>
 
   </body>
 </html>

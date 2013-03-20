@@ -1,3 +1,7 @@
+## tl:dr
+
+Jekyll does not like ruby 2.0.  The simple workaround is to go back to ruby 1.9.
+
 ## The default setup
 
 Here's the steps I used to create the page on Github

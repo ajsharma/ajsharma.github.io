@@ -4,3 +4,8 @@ destination: ./_site
 lsi: false
 pygments: true
 auto: true
+title: ajsharma.github.com
+description: 
+google_analytics: UA-39440617-1
+show_downloads: true
+theme: jekyll-theme-minimal

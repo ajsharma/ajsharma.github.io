@@ -1,2 +1,2 @@
 #! /usr/bin/env bash
-jekyll --pygments --no-lsi --safe --server --auto
+bundle exec jekyll serve

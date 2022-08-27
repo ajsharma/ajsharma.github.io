@@ -2,7 +2,7 @@ safe: true
 source: .
 destination: ./_site
 lsi: false
-pygments: true
+highlighter: rogue
 auto: true
 title: ajsharma.github.io
 description: 

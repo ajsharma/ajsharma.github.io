@@ -3,6 +3,8 @@ layout: default
 title: Flat Controllers, Many Models in Rails
 ---
 
+# Flat Controllers, Many Models in Rails
+
 Additional types of models beyond the ActiveRecord.
 
 ## Forms

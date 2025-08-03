@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'dark-bg': '#000f12',
+            'dark-bg-alt': '#011e1c',
+            'text-primary': '#fff4e4',
+            'code-bg': '#003319',
+            'code-text': '#FFDD66',
+            'output-bg': '#002611'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+  <article class="min-h-screen bg-gradient-to-t from-dark-bg to-dark-bg-alt font-sans px-6 py-16" style="color: rgb(255,244,228);">
+    <div class="max-w-3xl w-full max-w-[42ch]">
+      {% if page.layout == 'post' or page.title %}
+      <header class="mb-16 border-b border-white/20 pb-4 uppercase tracking-wide">
+        <h1 class="text-4xl font-bold mb-2">{{ page.title | default: site.title }}</h1>
+        {% if page.date %}
+        <p class="text-sm opacity-70">// {{ page.date | date: "%B %d, %Y" }} — <span class="underline underline-offset-2">{{ site.title }}</span></p>
+        {% endif %}
+      </header>
+      {% endif %}
+
+      <section class="text-base leading-relaxed space-y-8">
+        {{ content }}
+      </section>
+    </div>
+  </article>
+</body>
+</html>

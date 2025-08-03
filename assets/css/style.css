@@ -1,0 +1,69 @@
+/* Custom styles for the blog based on example format */
+h2 {
+  @apply text-xl font-semibold uppercase tracking-tight border-b border-white/10 pb-1 mt-12;
+}
+
+ol {
+  @apply list-decimal list-inside space-y-2 text-sm opacity-95;
+}
+
+ol li {
+  @apply mb-2;
+}
+
+ol li strong {
+  @apply font-semibold;
+}
+
+blockquote, .quote {
+  @apply border-l-4 border-white/10 pl-4 italic opacity-90;
+}
+
+pre, code {
+  @apply font-mono;
+}
+
+pre {
+  @apply bg-white/5 p-4 rounded-md text-sm overflow-auto;
+}
+
+.code-output {
+  @apply bg-white/5 p-4 rounded-md font-mono text-sm;
+}
+
+.console-label {
+  @apply text-sm font-mono uppercase mt-2 opacity-70;
+}
+
+p {
+  @apply mb-6;
+}
+
+.conclusion {
+  @apply text-sm italic opacity-90;
+}
+
+/* Link styles */
+a {
+  @apply underline underline-offset-2 hover:opacity-80 transition-opacity;
+}
+
+/* Code highlighting */
+code {
+  @apply bg-white/10 px-1 py-0.5 rounded text-sm;
+}
+
+/* List styles */
+ul {
+  @apply list-disc list-inside space-y-2 opacity-95;
+}
+
+/* Strong text */
+strong {
+  @apply font-semibold;
+}
+
+/* Emphasis */
+em {
+  @apply italic;
+}

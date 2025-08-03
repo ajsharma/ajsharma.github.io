@@ -1,0 +1,29 @@
+---
+layout: default
+---
+
+<div class="space-y-8">
+  {{ content }}
+
+  {% if site.posts.size > 0 %}
+    <div class="mt-16">
+      <h2 class="text-xl font-semibold uppercase tracking-tight border-b border-white/10 pb-1 mb-8">Recent Posts</h2>
+      
+      <div class="space-y-6">
+        {% for post in site.posts limit: 5 %}
+          <article class="border-l-4 border-white/20 pl-4">
+            <h3 class="text-lg font-semibold mb-2">
+              <a href="{{ post.url | relative_url }}" class="hover:opacity-80 transition-opacity">
+                {{ post.title }}
+              </a>
+            </h3>
+            <p class="text-sm opacity-70 mb-2">{{ post.date | date: "%B %d, %Y" }}</p>
+            {% if post.excerpt %}
+              <p class="text-sm opacity-90">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>

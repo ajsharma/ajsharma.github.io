@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "ajsharma"
+    assignees:
+      - "ajsharma"
+    commit-message:
+      prefix: "deps"
+      include: "scope"

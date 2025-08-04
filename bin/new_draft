@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+require 'date'
+
+if ARGV.empty?
+  puts "Usage: bin/new_draft \"Your Post Title\""
+  exit 1
+end
+
+title = ARGV.join(' ')
+slug = title.downcase.gsub(/[^a-z0-9\s]/, '').gsub(/\s+/, '-')
+filename = "#{slug}.md"
+filepath = File.join('_drafts', filename)
+
+if File.exist?(filepath)
+  puts "Draft already exists: #{filepath}"
+  exit 1
+end
+
+front_matter = <<~FRONTMATTER
+---
+layout: post
+title: #{title}
+---
+
+FRONTMATTER
+
+File.write(filepath, front_matter)
+puts "Created draft: #{filepath}"

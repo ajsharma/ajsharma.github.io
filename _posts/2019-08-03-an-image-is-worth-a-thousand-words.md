@@ -1,4 +1,7 @@
-An image is worth a thousand words.
+---
+layout: default
+title: An image is worth a thousand words.
+---
 
 I've saved hours by updating my MacOS screenshot folder to be a dedicated `~/Screenshots` folder and then mounting the new folder to my dock.
 

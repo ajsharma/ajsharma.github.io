@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 title: An image is worth a thousand words.
 ---
 

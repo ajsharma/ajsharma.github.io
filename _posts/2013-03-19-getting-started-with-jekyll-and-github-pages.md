@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 title: Getting Started with Jekyll and GitHub Pages
 ---
 

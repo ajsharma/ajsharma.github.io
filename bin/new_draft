@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+# Create a new draft with the title and correct front matter
+# 
+# @example
+#   bin/new_draft "I have a cool idea to share"
+
 require 'date'
 
 if ARGV.empty?

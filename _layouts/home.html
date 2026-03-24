@@ -2,28 +2,38 @@
 layout: default
 ---
 
-<div class="space-y-8">
-  {{ content }}
+<div class="min-h-screen px-6 py-16 md:py-24 flex flex-col">
+  <div class="max-w-[52ch] mx-auto w-full flex-1">
 
-  {% if site.posts.size > 0 %}
-    <div class="mt-16">
-      <h2 class="text-xl font-semibold uppercase tracking-tight border-b border-white/10 pb-1 mb-8">Recent Posts</h2>
-      
-      <div class="space-y-6">
-        {% for post in site.posts limit: 5 %}
-          <article class="border-l-4 border-white/20 pl-4">
-            <h3 class="text-lg font-semibold mb-2">
-              <a href="{{ post.url | relative_url }}" class="hover:opacity-80 transition-opacity">
-                {{ post.title }}
-              </a>
-            </h3>
-            <p class="text-sm opacity-70 mb-2">{{ post.date | date: "%B %d, %Y" }}</p>
-            {% if post.excerpt %}
-              <p class="text-sm opacity-90">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
-            {% endif %}
-          </article>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
+    <header class="mb-20">
+      <h1 class="font-display text-4xl md:text-5xl font-light text-parchment tracking-tight leading-none mb-5">
+        {{ site.title }}
+      </h1>
+      <div class="h-px bg-gold w-10"></div>
+    </header>
+
+    {% if site.posts.size > 0 %}
+    <nav>
+      {% for post in site.posts %}
+      <a href="{{ post.url | relative_url }}" class="group flex items-baseline justify-between py-4 border-b border-forest-dim hover:border-sage-dim transition-colors duration-150 {% if forloop.first %}border-t{% endif %}">
+        <span class="font-body text-base text-parchment group-hover:text-gold-light transition-colors duration-150 leading-snug pr-4">
+          {{ post.title }}
+        </span>
+        <span class="font-ui text-[11px] text-sage-dim uppercase tracking-widest shrink-0">
+          {{ post.date | date: "%b %Y" }}
+        </span>
+      </a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+
+  </div>
+
+  <footer class="max-w-[52ch] mx-auto w-full mt-20 pt-6 border-t border-forest-dim">
+    <p class="font-ui text-[11px] text-sage-dim">
+      <a href="https://github.com/{{ site.github_username }}" class="hover:text-gold transition-colors duration-150">github</a>
+      <span class="mx-2 opacity-30">&middot;</span>
+      <a href="mailto:{{ site.email }}" class="hover:text-gold transition-colors duration-150">{{ site.email }}</a>
+    </p>
+  </footer>
 </div>

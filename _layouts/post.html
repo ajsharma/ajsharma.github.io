@@ -2,4 +2,36 @@
 layout: default
 ---
 
-{{ content }}
+<article class="min-h-screen px-6 py-16 md:py-24">
+  <div class="max-w-[68ch] mx-auto">
+
+    <nav class="mb-16">
+      <a href="{{ '/' | relative_url }}" class="font-ui text-sm text-sage hover:text-gold-light transition-colors duration-150">
+        &larr; {{ site.title }}
+      </a>
+    </nav>
+
+    <header class="mb-12">
+      <h1 class="font-display text-3xl md:text-[2.25rem] font-semibold leading-tight text-parchment mb-4">
+        {{ page.title }}
+      </h1>
+      {% if page.date %}
+      <p class="font-ui text-[11px] text-sage-dim uppercase tracking-[0.15em]">
+        {{ page.date | date: "%B %d, %Y" }}
+      </p>
+      {% endif %}
+      <div class="h-px bg-gold mt-6 w-10"></div>
+    </header>
+
+    <div class="prose-content">
+      {{ content }}
+    </div>
+
+    <footer class="mt-24 pt-8 border-t border-forest-dim">
+      <a href="{{ '/' | relative_url }}" class="font-ui text-sm text-sage hover:text-gold-light transition-colors duration-150">
+        &larr; {{ site.title }}
+      </a>
+    </footer>
+
+  </div>
+</article>

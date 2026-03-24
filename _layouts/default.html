@@ -4,41 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+
   <script>
     tailwind.config = {
       theme: {
+        fontFamily: {
+          'display': ['"Playfair Display"', 'Georgia', 'serif'],
+          'body':    ['Lora', 'Georgia', 'serif'],
+          'ui':      ['"DM Sans"', 'system-ui', 'sans-serif'],
+          'mono':    ['"JetBrains Mono"', 'monospace'],
+        },
         extend: {
           colors: {
-            'dark-bg': '#000f12',
-            'dark-bg-alt': '#011e1c',
-            'text-primary': '#fff4e4',
-            'code-bg': '#003319',
-            'code-text': '#FFDD66',
-            'output-bg': '#002611'
-          }
+            'bg':          '#070d0a',
+            'bg-raised':   '#0d1810',
+            'bg-code':     '#060c08',
+            'parchment':   '#ede0c8',
+            'sage':        '#7d9186',
+            'sage-dim':    '#4a6057',
+            'gold':        '#b8952a',
+            'gold-light':  '#d4ab3f',
+            'forest-dim':  '#1d3a28',
+          },
         }
       }
     }
   </script>
 </head>
-<body>
-  <article class="min-h-screen bg-gradient-to-t from-dark-bg to-dark-bg-alt font-sans px-6 py-16" style="color: rgb(255,244,228);">
-    <div class="max-w-3xl w-full max-w-[42ch]">
-      {% if page.layout == 'post' or page.title %}
-      <header class="mb-16 border-b border-white/20 pb-4 uppercase tracking-wide">
-        <h1 class="text-4xl font-bold mb-2">{{ page.title | default: site.title }}</h1>
-        {% if page.date %}
-        <p class="text-sm opacity-70">// {{ page.date | date: "%B %d, %Y" }} — <span class="underline underline-offset-2">{{ site.title }}</span></p>
-        {% endif %}
-      </header>
-      {% endif %}
-
-      <section class="text-base leading-relaxed space-y-8">
-        {{ content }}
-      </section>
-    </div>
-  </article>
+<body class="bg-bg text-parchment font-body antialiased">
+  {{ content }}
 </body>
 </html>

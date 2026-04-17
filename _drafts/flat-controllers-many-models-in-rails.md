@@ -55,7 +55,7 @@ Both read as a flat sequence. No hidden steps.
 
 ## Transformations, I/O, and where AR models fit
 
-**Transformations** are objects with no external side effects. **Form objects** are the canonical example: input is a model plus user-submitted params; output is a Boolean (valid?) plus the populated model. No persistence — that belongs in the procedure.
+**Transformations** are objects with no external side effects. **Form objects** are the canonical example: input is a model plus user-submitted params; output is a Boolean (valid?) plus the populated model. No persistence — that belongs in the procedure. **Permission objects** (policies) are another: input is a user and a resource; output is a Boolean. No queries triggered implicitly, no state changed — the procedure decides what to do with the result.
 
 ```ruby
 class OrderForm

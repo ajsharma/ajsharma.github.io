@@ -75,7 +75,7 @@ end
 
 **ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: persistence. That's fine. The problem is when callbacks add more I/O — emails, API calls, enqueued jobs — making the model's boundary invisible to the procedure reading it and hiding the artifacts those operations produce.
 
-## Two scenarios where this earns its keep
+## Scenarios where this earns its keep
 
 **Multiple models in one action.** A checkout action that saves an order and a payment. A Form object holds references to both; the controller still reads as a flat sequence:
 
@@ -118,5 +118,23 @@ class SendWeeklyDigestsJob < ApplicationJob
   end
 end
 ```
+
+**Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Sending a confirmation email doesn't need to block the response. Updating an analytics aggregate doesn't need to happen before the redirect. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`.
+
+```ruby
+def create
+  @form = OrderForm.new(Order.new(user: current_user), order_params)
+  if @form.valid?
+    @form.order.save!                                      # essential — must happen now
+    ConfirmationMailer.order(@form.order).deliver_later    # non-essential — can defer
+    AnalyticsJob.perform_later("order.created", @form.order.id) # non-essential — can defer
+    redirect_to @form.order
+  else
+    render :new
+  end
+end
+```
+
+The distinction between essential and non-essential I/O is visible in the procedure. Distributing the workflow is a local change.
 
 When procedures are explicit and transformations have clean I/O contracts, changes become tractable. You know what each object takes and produces. You can narrate the code.

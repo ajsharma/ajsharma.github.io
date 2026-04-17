@@ -137,4 +137,4 @@ end
 
 The distinction between essential and non-essential I/O is visible in the procedure. Distributing the workflow is a local change.
 
-When procedures are explicit and transformations have clean I/O contracts, changes become tractable. You know what each object takes and produces. You can narrate the code.
+The opening problem was a change that looked local but touched five things. This structure doesn't eliminate complexity — it makes the five things visible. Confidence in a change becomes local: open the procedure, read it top to bottom, and you know exactly what moves.

@@ -38,10 +38,10 @@ def create
   if @form.valid?
     ActiveRecord::Base.transaction do
       @form.order.save!
-      cart.update!(status: :completed)
+      cart.complete!
     end
-    NotifyPurchaserJob.perform_later(@form.order.id)
-    NotifyMerchantJob.perform_later(@form.order.id)
+    NotifyPurchaserJob.perform_later(@form.order)
+    NotifyMerchantJob.perform_later(@form.order)
     redirect_to @form.order
   else
     render :new
@@ -77,6 +77,10 @@ A permission object in plain Ruby:
 
 ```ruby
 class OrderPolicy
+  def self.editable?(user, order)
+    new(user, order).editable?
+  end
+
   def initialize(user, order)
     @user  = user
     @order = order
@@ -92,8 +96,8 @@ The procedure calls it and owns the decision:
 
 ```ruby
 def update
-  unless OrderPolicy.new(current_user, @order).editable?
-    redirect_to @order, alert: "Not authorized" and return
+  unless OrderPolicy.editable?(current_user, @order)
+    return redirect_to @order, alert: "Not authorized"
   end
 
   if @order.update(order_params)
@@ -151,10 +155,10 @@ def create
     ActiveRecord::Base.transaction do
       @form.order.save!
       @form.payment.save!
-      cart.update!(status: :completed)
+      cart.complete!
     end
-    NotifyPurchaserJob.perform_later(@form.order.id)
-    NotifyMerchantJob.perform_later(@form.order.id)
+    NotifyPurchaserJob.perform_later(@form.order)
+    NotifyMerchantJob.perform_later(@form.order)
     redirect_to @form.order
   else
     render :new
@@ -183,10 +187,10 @@ def create
   if @form.valid?
     ActiveRecord::Base.transaction do
       @form.order.save!                  # essential — must happen now
-      cart.update!(status: :completed)   # essential — must happen now
+      cart.complete!   # essential — must happen now
     end
-    NotifyPurchaserJob.perform_later(@form.order.id)  # non-essential — can defer
-    NotifyMerchantJob.perform_later(@form.order.id)   # non-essential — can defer
+    NotifyPurchaserJob.perform_later(@form.order)  # non-essential — can defer
+    NotifyMerchantJob.perform_later(@form.order)   # non-essential — can defer
     redirect_to @form.order
   else
     render :new
@@ -206,10 +210,10 @@ def create
   if @form.valid?
     ActiveRecord::Base.transaction do
       @form.order.save!
-      cart.update!(status: :completed)
+      cart.complete!
     end
-    NotifyPurchaserJob.perform_later(@form.order.id)
-    NotifyMerchantJob.perform_later(@form.order.id)
+    NotifyPurchaserJob.perform_later(@form.order)
+    NotifyMerchantJob.perform_later(@form.order)
     redirect_to @form.order
   else
     render :new

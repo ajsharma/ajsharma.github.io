@@ -33,7 +33,7 @@ A procedure is an explicit sequence of steps triggered by an external event. Con
 
 ```ruby
 def create
-  cart  = Cart.find(session[:cart_id])
+  cart  = current_user.current_cart
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
     ActiveRecord::Base.transaction do
@@ -145,7 +145,7 @@ class OrderWithPaymentForm
 end
 
 def create
-  cart  = Cart.find(session[:cart_id])
+  cart  = current_user.current_cart
   @form = OrderWithPaymentForm.new(cart, Payment.new, order_params)
   if @form.valid?
     ActiveRecord::Base.transaction do
@@ -178,7 +178,7 @@ end
 
 ```ruby
 def create
-  cart  = Cart.find(session[:cart_id])
+  cart  = current_user.current_cart
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
     ActiveRecord::Base.transaction do
@@ -201,7 +201,7 @@ The distinction between essential and non-essential I/O is visible in the proced
 ```ruby
 # Procedure — inputs and I/O fetches are visible
 def create
-  cart  = Cart.find(session[:cart_id])           # I/O fetch
+  cart  = current_user.current_cart           # I/O fetch
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
     ActiveRecord::Base.transaction do
@@ -217,10 +217,9 @@ def create
 end
 
 # Test setup is a direct mirror
-user = create(:user)                   # current_user — procedure input
-cart = create(:cart, user: user)       # Cart.find    — I/O fetch in procedure
+user = create(:user)              # current_user — procedure input
+create(:cart, user: user)         # current_user.current_cart — I/O in procedure
 
-session[:cart_id] = cart.id
 post :create, params: { order: { quantity: 2 } }
 ```
 

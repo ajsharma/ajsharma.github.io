@@ -86,15 +86,14 @@ The procedure calls it and owns the decision:
 
 ```ruby
 def update
-  policy = OrderPolicy.new(current_user, @order)
-  unless policy.editable?
+  unless OrderPolicy.new(current_user, @order).editable?
     redirect_to @order, alert: "Not authorized" and return
   end
 
   @form = OrderForm.new(@order, order_params)
   if @form.valid?
-    @order.save!
-    redirect_to @order
+    @form.order.save!
+    redirect_to @form.order
   else
     render :edit
   end
@@ -160,9 +159,9 @@ end
 ```ruby
 class SendWeeklyDigestsJob < ApplicationJob
   def perform
-    users   = DigestableUsersQuery.new.call          # I/O: one query
-    digests = users.map { |u| DigestBuilder.new(u) } # Transformation: no DB calls
-    digests.each { |d| DigestMailer.weekly(d).deliver_now } # I/O: send
+    DigestableUsersQuery.new.call                        # I/O: one query
+      .map  { |u| DigestBuilder.new(u) }                # Transformation: no DB calls
+      .each { |d| DigestMailer.weekly(d).deliver_now }  # I/O: send
   end
 end
 ```
@@ -191,11 +190,11 @@ The distinction between essential and non-essential I/O is visible in the proced
 # Procedure — inputs and I/O fetches are visible
 def create
   product = Product.find(params[:product_id])  # I/O fetch
-  @form = OrderForm.new(Order.new(user: current_user, product: product), order_params)
+  @form   = OrderForm.new(Order.new(user: current_user, product: product), order_params)
   if @form.valid?
     @form.order.save!
     ConfirmationMailer.order(@form.order).deliver_later
-    redirect_to @form.order
+    redirect_to product
   else
     render :new
   end

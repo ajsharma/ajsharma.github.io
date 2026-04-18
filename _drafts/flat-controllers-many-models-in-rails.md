@@ -172,4 +172,12 @@ product = create(:product) # Product.find  — I/O fetch in procedure
 post :create, params: { product_id: product.id, order: { quantity: 2 } }
 ```
 
+## Getting there
+
+The most direct first step: find a model callback that triggers a side effect — an email, a job, a third-party call — and move it inline into the controller. The controller gets longer. That discomfort is informative. What you're feeling is the explicit declaration of work that was previously invisible. The instinct to re-extract it is the DRY instinct, and it's worth sitting with the resistance before acting on it. Explicit side effects aren't noise — the explicitness is the point.
+
+This pattern earns its keep in proportion to the number of control planes in the system. In an app with a single controller layer and no background jobs, the benefits are modest. The argument gets sharper as the system grows: a customer-facing controller, an admin controller, an ops controller, background jobs, Rake tasks — all orchestrating against the same data. In that environment, a callback that fires on every save is a liability. An ops engineer writing a script to handle a support edge case shouldn't have to reason about whether it'll trigger customer-facing emails. When each control plane is explicit and side effects live in procedures, they don't.
+
+The Rails console belongs in this list too — it's part of the control plane and often overlooked. A developer running `Order.create(...)` against production has entered an orchestration context. If that model has I/O-mutating callbacks, the console carries the same risk as any script or job. When side effects are inline and visible, that risk is legible.
+
 The opening problem was a change that looked local but touched five things. This structure doesn't eliminate complexity — it makes the five things visible. Confidence in a change becomes local: open the procedure, read it top to bottom, and you know exactly what moves.

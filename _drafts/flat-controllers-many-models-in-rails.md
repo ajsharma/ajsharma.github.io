@@ -7,6 +7,8 @@ title: Flat Controllers, Many Models in Rails
 
 A change that looks local turns out to touch five things. A callback fires. An after-commit hook runs. A scope with a side effect triggers a query you didn't write. The problem isn't Rails — it's that logic is hiding. The codebase has become hard to narrate.
 
+The testing experience makes this concrete. You want to write a test to validate your change, but you don't know what state the world needs to be in at the start. What records do you create? Which associations matter? You add factories until the test passes, then wonder if the setup reflects anything real. As the data model grows, the gap between "setup that makes tests pass" and "setup that reflects real-world behavior" widens. You end up with tests you can't fully trust — not because the assertions are wrong, but because you aren't sure the setup is right.
+
 ## The judgment test
 
 Here's how you know something is hiding: open any procedure — a controller action, a job, a worker — and try to narrate it to a non-technical stakeholder in near real-time. Can you see all the inputs? Can you account for every mutation? If you can't, something is hiding. Callbacks, side-effecting models, logic tucked into scopes — all of them fail this test.

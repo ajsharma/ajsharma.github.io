@@ -15,7 +15,7 @@ The testing experience makes the gap concrete. You want to validate your change,
 
 Here's how you know something is hiding: open any procedure — a controller action, a job, a worker — and try to narrate it to a non-technical stakeholder in near real-time. Can you see all the inputs? Can you account for every mutation? If you can't, something is hiding. Callbacks, side-effecting models, logic tucked into scopes — all of them fail this test.
 
-The rest of this post is organized around passing it.
+Passing it requires a deliberate choice about which layer owns what.
 
 ## Three concepts, not three files
 

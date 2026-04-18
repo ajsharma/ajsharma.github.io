@@ -33,9 +33,11 @@ A procedure is an explicit sequence of steps triggered by an external event. Con
 
 ```ruby
 def create
-  @form = OrderForm.new(Order.new(user: current_user), order_params)
+  cart  = Cart.find(session[:cart_id])
+  @form = OrderForm.new(cart, order_params)
   if @form.valid?
     @form.order.save!
+    CartClearJob.perform_later(cart.id)
     redirect_to @form.order
   else
     render :new
@@ -90,10 +92,8 @@ def update
     redirect_to @order, alert: "Not authorized" and return
   end
 
-  @form = OrderForm.new(@order, order_params)
-  if @form.valid?
-    @form.order.save!
-    redirect_to @form.order
+  if @order.update(order_params)
+    redirect_to @order
   else
     render :edit
   end
@@ -107,8 +107,8 @@ class OrderForm
   include ActiveModel::Model
   attr_reader :order
 
-  def initialize(order, params = {})
-    @order = order.tap { |o| o.assign_attributes(params) }
+  def initialize(cart, params = {})
+    @order = Order.new(user: cart.user, cart: cart).tap { |o| o.assign_attributes(params) }
     super(params)
   end
 
@@ -129,8 +129,8 @@ class OrderWithPaymentForm
   include ActiveModel::Model
   attr_reader :order, :payment
 
-  def initialize(order, payment, params = {})
-    @order   = order.tap   { |o| o.assign_attributes(params[:order]   || {}) }
+  def initialize(cart, payment, params = {})
+    @order   = Order.new(user: cart.user, cart: cart).tap { |o| o.assign_attributes(params[:order]   || {}) }
     @payment = payment.tap { |p| p.assign_attributes(params[:payment] || {}) }
     super(params)
   end
@@ -141,12 +141,14 @@ class OrderWithPaymentForm
 end
 
 def create
-  @form = OrderWithPaymentForm.new(Order.new(user: current_user), Payment.new, order_params)
+  cart  = Cart.find(session[:cart_id])
+  @form = OrderWithPaymentForm.new(cart, Payment.new, order_params)
   if @form.valid?
     ActiveRecord::Base.transaction do
       @form.order.save!
       @form.payment.save!
     end
+    CartClearJob.perform_later(cart.id)
     redirect_to @form.order
   else
     render :new
@@ -166,15 +168,16 @@ class SendWeeklyDigestsJob < ApplicationJob
 end
 ```
 
-**Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Sending a confirmation email doesn't need to block the response. Updating an analytics aggregate doesn't need to happen before the redirect. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`.
+**Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Saving the order must happen before we can redirect. Sending a confirmation email and clearing the cart don't need to block the response. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`.
 
 ```ruby
 def create
-  @form = OrderForm.new(Order.new(user: current_user), order_params)
+  cart  = Cart.find(session[:cart_id])
+  @form = OrderForm.new(cart, order_params)
   if @form.valid?
-    @form.order.save!                                      # essential — must happen now
-    ConfirmationMailer.order(@form.order).deliver_later    # non-essential — can defer
-    AnalyticsJob.perform_later("order.created", @form.order.id) # non-essential — can defer
+    @form.order.save!                                    # essential — must happen now
+    ConfirmationMailer.order(@form.order).deliver_later  # non-essential — can defer
+    CartClearJob.perform_later(cart.id)                  # non-essential — can defer
     redirect_to @form.order
   else
     render :new
@@ -189,22 +192,23 @@ The distinction between essential and non-essential I/O is visible in the proced
 ```ruby
 # Procedure — inputs and I/O fetches are visible
 def create
-  product = Product.find(params[:product_id])  # I/O fetch
-  @form   = OrderForm.new(Order.new(user: current_user, product: product), order_params)
+  cart  = Cart.find(session[:cart_id])           # I/O fetch
+  @form = OrderForm.new(cart, order_params)
   if @form.valid?
     @form.order.save!
-    ConfirmationMailer.order(@form.order).deliver_later
-    redirect_to product
+    CartClearJob.perform_later(cart.id)
+    redirect_to @form.order
   else
     render :new
   end
 end
 
 # Test setup is a direct mirror
-user    = create(:user)    # current_user — procedure input
-product = create(:product) # Product.find  — I/O fetch in procedure
+user = create(:user)                   # current_user — procedure input
+cart = create(:cart, user: user)       # Cart.find    — I/O fetch in procedure
 
-post :create, params: { product_id: product.id, order: { quantity: 2 } }
+session[:cart_id] = cart.id
+post :create, params: { order: { quantity: 2 } }
 ```
 
 ## Getting there

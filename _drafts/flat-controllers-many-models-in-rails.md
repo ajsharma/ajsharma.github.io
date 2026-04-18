@@ -36,7 +36,10 @@ def create
   cart  = Cart.find(session[:cart_id])
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
-    @form.order.save!
+    ActiveRecord::Base.transaction do
+      @form.order.save!
+      cart.update!(status: :completed)
+    end
     NotifyPurchaserJob.perform_later(@form.order.id)
     NotifyMerchantJob.perform_later(@form.order.id)
     redirect_to @form.order
@@ -148,6 +151,7 @@ def create
     ActiveRecord::Base.transaction do
       @form.order.save!
       @form.payment.save!
+      cart.update!(status: :completed)
     end
     NotifyPurchaserJob.perform_later(@form.order.id)
     NotifyMerchantJob.perform_later(@form.order.id)
@@ -177,9 +181,12 @@ def create
   cart  = Cart.find(session[:cart_id])
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
-    @form.order.save!                                      # essential — must happen now
-    NotifyPurchaserJob.perform_later(@form.order.id)       # non-essential — can defer
-    NotifyMerchantJob.perform_later(@form.order.id)        # non-essential — can defer
+    ActiveRecord::Base.transaction do
+      @form.order.save!                  # essential — must happen now
+      cart.update!(status: :completed)   # essential — must happen now
+    end
+    NotifyPurchaserJob.perform_later(@form.order.id)  # non-essential — can defer
+    NotifyMerchantJob.perform_later(@form.order.id)   # non-essential — can defer
     redirect_to @form.order
   else
     render :new
@@ -197,7 +204,10 @@ def create
   cart  = Cart.find(session[:cart_id])           # I/O fetch
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
-    @form.order.save!
+    ActiveRecord::Base.transaction do
+      @form.order.save!
+      cart.update!(status: :completed)
+    end
     NotifyPurchaserJob.perform_later(@form.order.id)
     NotifyMerchantJob.perform_later(@form.order.id)
     redirect_to @form.order

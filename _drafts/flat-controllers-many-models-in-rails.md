@@ -5,9 +5,11 @@ title: Flat Controllers, Many Models in Rails
 
 # Flat Controllers, Many Models in Rails
 
-A change that looks local turns out to touch five things. A callback fires. An after-commit hook runs. A scope with a side effect triggers a query you didn't write. The problem isn't Rails — it's that logic is hiding. The codebase has become hard to narrate.
+The goal isn't to maintain a codebase. It's to evolve it — to introduce something that didn't exist before, to move an idea from concept to production before the window closes. Radical change is the work. The constraint on that work is almost always comprehension: you can't responsibly reshape what you don't understand.
 
-The testing experience makes this concrete. You want to write a test to validate your change, but you don't know what state the world needs to be in at the start. What records do you create? Which associations matter? You add factories until the test passes, then wonder if the setup reflects anything real. As the data model grows, the gap between "setup that makes tests pass" and "setup that reflects real-world behavior" widens. You end up with tests you can't fully trust — not because the assertions are wrong, but because you aren't sure the setup is right.
+That understanding is often missing. Not as a character flaw — codebases grow in ways that obscure their own behavior. A change that looks local turns out to touch five things. A callback fires somewhere downstream. A scope with a side effect triggers a query you didn't write. The more the system has grown, the more the gap between "what this code appears to do" and "what this code actually does" widens.
+
+The testing experience makes the gap concrete. You want to validate your change, but you don't know what state the world needs to be in at the start. What records do you create? Which associations matter? You add factories until the test passes, then wonder if the setup reflects anything real. As the data model grows, the gap between "setup that makes tests pass" and "setup that reflects real-world behavior" widens. You end up with tests you can't fully trust — not because the assertions are wrong, but because you aren't sure the setup is right.
 
 ## The judgment test
 

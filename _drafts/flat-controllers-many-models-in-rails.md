@@ -100,8 +100,10 @@ end
 def checkout
   @form = CheckoutForm.new(@order, Payment.new, checkout_params)
   if @form.valid?
-    @form.order.save!
-    @form.payment.save!
+    ActiveRecord::Base.transaction do
+      @form.order.save!
+      @form.payment.save!
+    end
     redirect_to confirmation_path
   else
     render :checkout

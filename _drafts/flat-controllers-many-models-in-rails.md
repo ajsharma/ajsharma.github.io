@@ -67,6 +67,42 @@ This isn't a defense of long procedures. Every line in a procedure should earn i
 
 The decision rule for whether an abstraction belongs in this layer: does it *orchestrate*, or does it *answer*? A permission object answers — given this user and resource, can they act? A form object answers — are these params valid? An object that fetches records, delegates to another service, and enqueues a job orchestrates — that belongs in the procedure, written out explicitly. Extractions that answer are signal. Extractions that orchestrate are a second control plane.
 
+A permission object in plain Ruby:
+
+```ruby
+class OrderPolicy
+  def initialize(user, order)
+    @user  = user
+    @order = order
+  end
+
+  def editable?
+    @order.user_id == @user.id || @user.admin?
+  end
+end
+```
+
+The procedure calls it and owns the decision:
+
+```ruby
+def update
+  policy = OrderPolicy.new(current_user, @order)
+  unless policy.editable?
+    redirect_to @order, alert: "Not authorized" and return
+  end
+
+  @form = OrderForm.new(@order, order_params)
+  if @form.valid?
+    @order.save!
+    redirect_to @order
+  else
+    render :edit
+  end
+end
+```
+
+No framework, no DSL, no implicit query. The policy answers one question. The procedure decides what happens next.
+
 ```ruby
 class OrderForm
   include ActiveModel::Model

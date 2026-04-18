@@ -37,7 +37,8 @@ def create
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
     @form.order.save!
-    CartClearJob.perform_later(cart.id)
+    NotifyPurchaserJob.perform_later(@form.order.id)
+    NotifyMerchantJob.perform_later(@form.order.id)
     redirect_to @form.order
   else
     render :new
@@ -148,7 +149,8 @@ def create
       @form.order.save!
       @form.payment.save!
     end
-    CartClearJob.perform_later(cart.id)
+    NotifyPurchaserJob.perform_later(@form.order.id)
+    NotifyMerchantJob.perform_later(@form.order.id)
     redirect_to @form.order
   else
     render :new
@@ -168,16 +170,16 @@ class SendWeeklyDigestsJob < ApplicationJob
 end
 ```
 
-**Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Saving the order must happen before we can redirect. Sending a confirmation email and clearing the cart don't need to block the response. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`.
+**Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Saving the order must happen before we can redirect. Notifying the purchaser and merchant don't need to block the response. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`.
 
 ```ruby
 def create
   cart  = Cart.find(session[:cart_id])
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
-    @form.order.save!                                    # essential — must happen now
-    ConfirmationMailer.order(@form.order).deliver_later  # non-essential — can defer
-    CartClearJob.perform_later(cart.id)                  # non-essential — can defer
+    @form.order.save!                                      # essential — must happen now
+    NotifyPurchaserJob.perform_later(@form.order.id)       # non-essential — can defer
+    NotifyMerchantJob.perform_later(@form.order.id)        # non-essential — can defer
     redirect_to @form.order
   else
     render :new
@@ -196,7 +198,8 @@ def create
   @form = OrderForm.new(cart, order_params)
   if @form.valid?
     @form.order.save!
-    CartClearJob.perform_later(cart.id)
+    NotifyPurchaserJob.perform_later(@form.order.id)
+    NotifyMerchantJob.perform_later(@form.order.id)
     redirect_to @form.order
   else
     render :new

@@ -55,9 +55,15 @@ end
 
 Both read as a flat sequence. No hidden steps.
 
+Web requests, jobs, and tasks are the application's **control plane** — the only layer whose job is orchestration. Naming this matters. Service objects fail long-term not because they're wrong in principle, but because they create a second control plane. Engineers can't tell whether orchestration belongs in the controller or the service. Services start calling jobs. Jobs call other services. You end up with two layers that both orchestrate, neither with full visibility.
+
+This isn't a defense of long procedures. Every line in a procedure should earn its place as a business step. Noise — intermediate variables that just rename concepts, complex rules embedded inline — should be extracted. The question is what kind of extraction. A procedure that grows because it has ten genuine business steps is fine. A procedure cluttered with implementation detail that could be named and isolated is not. Extract the detail; keep the orchestration.
+
 ## Transformations, I/O, and where AR models fit
 
-**Transformations** are objects with no external side effects. **Form objects** are the canonical example: input is a model plus user-submitted params; output is a Boolean (valid?) plus the populated model. No persistence — that belongs in the procedure. **Permission objects** (policies) are another: input is a user and a resource; output is a Boolean. No queries triggered implicitly, no state changed — the procedure decides what to do with the result.
+**Transformations** are objects with no external side effects. **Form objects** are the canonical example: input is a model plus user-submitted params; output is a Boolean (valid?) plus the populated model. No persistence — that belongs in the procedure. **Permission objects** are another: input is a user and a resource; output is a Boolean. No queries triggered implicitly, no state changed — the procedure decides what to do with the result.
+
+The decision rule for whether an abstraction belongs in this layer: does it *orchestrate*, or does it *answer*? A permission object answers — given this user and resource, can they act? A form object answers — are these params valid? An object that fetches records, delegates to another service, and enqueues a job orchestrates — that belongs in the procedure, written out explicitly. Extractions that answer are signal. Extractions that orchestrate are a second control plane.
 
 ```ruby
 class OrderForm
@@ -75,14 +81,14 @@ end
 
 **I/O objects** are anything that touches external state. **Query objects** are I/O — they read from the database and belong in the procedure's explicit sequence, not inside a model method or scope. I/O deserves particular attention because I/O produces *artifacts*: records other flows read, emails users receive, jobs workers process. These artifacts carry forward into downstream user experiences and business outcomes. When I/O is hidden in a callback or a side-effecting scope, you lose the ability to trace which procedures produce which artifacts and what downstream work they trigger.
 
-**ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: persistence. That's fine. The problem is when callbacks add more I/O — emails, API calls, enqueued jobs — making the model's boundary invisible to the procedure reading it and hiding the artifacts those operations produce.
+**ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: persistence. That's fine — validations and pure callbacks are part of the model's job. The problem is callbacks that trigger I/O side effects: sending an email, enqueuing a job, calling an external API. These create an implicit "always" contract — any caller that saves this model gets the side effects, whether it wants them or not. Web requests, background jobs, bulk imports, and test factories all fire the same callback. When that contract breaks down — and it will — the fix is `skip_callback`, which is the codebase admitting the "always" was never an invariant.
 
 ## Scenarios where this earns its keep
 
-**Multiple models in one action.** A checkout action that saves an order and a payment. A Form object holds references to both; the controller still reads as a flat sequence:
+**Multiple models in one action.** A create action that saves an order and a payment. A Form object holds references to both; the controller still reads as a flat sequence:
 
 ```ruby
-class CheckoutForm
+class OrderWithPaymentForm
   include ActiveModel::Model
   attr_reader :order, :payment
 
@@ -97,16 +103,16 @@ class CheckoutForm
   def payment_valid; errors.add(:payment, "invalid") unless payment.valid?; end
 end
 
-def checkout
-  @form = CheckoutForm.new(@order, Payment.new, checkout_params)
+def create
+  @form = OrderWithPaymentForm.new(Order.new(user: current_user), Payment.new, order_params)
   if @form.valid?
     ActiveRecord::Base.transaction do
       @form.order.save!
       @form.payment.save!
     end
-    redirect_to confirmation_path
+    redirect_to @form.order
   else
-    render :checkout
+    render :new
   end
 end
 ```

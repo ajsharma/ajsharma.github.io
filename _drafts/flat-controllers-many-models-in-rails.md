@@ -137,4 +137,27 @@ end
 
 The distinction between essential and non-essential I/O is visible in the procedure. Distributing the workflow is a local change.
 
+**Tests mirror the procedure.** When a procedure is explicit about its inputs and I/O, the test setup writes itself. Every I/O fetch in the procedure corresponds to an artifact you create in the setup. Every input corresponds to a param or fixture. There are no mystery guests — if a test fails because a record doesn't exist, that record should be findable in the procedure. An `after_create` callback that enqueues a job or touches a second table means your test setup needs records you can't predict from reading the procedure. Explicit procedures eliminate that surprise: read the procedure top to bottom and you know exactly what to create.
+
+```ruby
+# Procedure — inputs and I/O fetches are visible
+def create
+  product = Product.find(params[:product_id])  # I/O fetch
+  @form = OrderForm.new(Order.new(user: current_user, product: product), order_params)
+  if @form.valid?
+    @form.order.save!
+    ConfirmationMailer.order(@form.order).deliver_later
+    redirect_to @form.order
+  else
+    render :new
+  end
+end
+
+# Test setup is a direct mirror
+user    = create(:user)    # current_user — procedure input
+product = create(:product) # Product.find  — I/O fetch in procedure
+
+post :create, params: { product_id: product.id, order: { quantity: 2 } }
+```
+
 The opening problem was a change that looked local but touched five things. This structure doesn't eliminate complexity — it makes the five things visible. Confidence in a change becomes local: open the procedure, read it top to bottom, and you know exactly what moves.

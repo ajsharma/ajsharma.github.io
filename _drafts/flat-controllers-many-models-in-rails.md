@@ -216,4 +216,6 @@ This pattern earns its keep in proportion to the number of control planes in the
 
 The Rails console belongs in this list too — it's part of the control plane and often overlooked. A developer running `Order.create(...)` against production has entered an orchestration context. If that model has I/O-mutating callbacks, the console carries the same risk as any script or job. When side effects are inline and visible, that risk is legible.
 
+A second concrete action: avoid creating a variable in a procedure unless it's used at least twice. A single-use variable is usually just an alias — a rename that adds a line without adding meaning. A variable used twice is different. It signals intentionality: you're holding a result to coordinate two subsequent steps, which is exactly what a procedure is for. When you find yourself assigning a variable and using it once, inline it. When a variable earns a second use, it's earning its name.
+
 The opening problem was a change that looked local but touched five things. This structure doesn't eliminate complexity — it makes the five things visible. Confidence in a change becomes local: open the procedure, read it top to bottom, and you know exactly what moves.

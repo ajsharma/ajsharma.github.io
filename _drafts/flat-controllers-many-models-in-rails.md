@@ -27,6 +27,12 @@ MVC is usually taught as three files. More useful: three concepts.
 
 This framing tells you what each layer is *for* and what it should never do.
 
+## One control plane
+
+Web requests, jobs, and tasks are the application's **control plane**: the only layer whose job is orchestration. Naming this matters because it identifies what must stay singular. Service objects fail long-term not because they're wrong in principle, but because they create a second control plane. Engineers can't tell whether orchestration belongs in the controller or the service. Services start calling jobs. Jobs call other services. You end up with two layers that both orchestrate, neither with full visibility.
+
+The taxonomy makes the failure mode legible: a service object that fetches records, validates inputs, saves a model, and enqueues a job isn't a transformation; it's a procedure in disguise. It orchestrates. Moving it out of the controller doesn't remove the orchestration; it just hides it one level deeper and splits the reader's attention between two places.
+
 ## Procedures
 
 A procedure is an explicit sequence of steps triggered by an external event. Controllers are procedures, but so are Jobs, Workers, Mailers, and Rake tasks. The same discipline applies to all of them: read top-to-bottom and see every input and every mutation.
@@ -135,12 +141,6 @@ end
 **I/O objects** are anything that touches external state. **Query objects** are I/O: they read from the database and belong in the procedure's explicit sequence, not inside a model method or scope. I/O deserves particular attention because I/O produces *artifacts*: records other flows read, emails users receive, jobs workers process. These artifacts carry forward into downstream user experiences and business outcomes. When I/O is hidden in a callback or a side-effecting scope, you lose the ability to trace which procedures produce which artifacts and what downstream work they trigger.
 
 **ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: database persistence. That's fine; validations and pure callbacks are part of the model's job. The problem is callbacks that trigger I/O side effects: sending an email, enqueuing a job, calling an external API. These create an implicit "always" contract: any caller that saves this model gets the side effects, whether it wants them or not. Web requests, background jobs, bulk imports, and test factories all fire the same callback. When that contract breaks down (and it will), the fix is `skip_callback`, which is the codebase admitting the "always" was never an invariant.
-
-## One control plane
-
-Web requests, jobs, and tasks are the application's **control plane**: the only layer whose job is orchestration. Naming this matters because it identifies what must stay singular. Service objects fail long-term not because they're wrong in principle, but because they create a second control plane. Engineers can't tell whether orchestration belongs in the controller or the service. Services start calling jobs. Jobs call other services. You end up with two layers that both orchestrate, neither with full visibility.
-
-The taxonomy makes the failure mode legible: a service object that fetches records, validates inputs, saves a model, and enqueues a job isn't a transformation; it's a procedure in disguise. It orchestrates. Moving it out of the controller doesn't remove the orchestration; it just hides it one level deeper and splits the reader's attention between two places.
 
 ## Scenarios where this earns its keep
 

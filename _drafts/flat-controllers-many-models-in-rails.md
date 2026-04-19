@@ -194,55 +194,26 @@ class SendWeeklyDigestsJob < ApplicationJob
 end
 ```
 
-**Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Saving the order must happen before we can redirect. Notifying the purchaser and merchant don't need to block the response. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`.
+**Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Saving the order must happen before we can redirect. Notifying the purchaser and merchant don't need to block the response. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`:
 
 ```ruby
-class OrdersController < ApplicationController
-  def create
-    cart  = current_user.current_cart
-    @form = OrderForm.new(cart, order_params)
-    if @form.valid?
-      ActiveRecord::Base.transaction do
-        @form.order.save!                  # essential
-        cart.complete!                     # essential
-      end
-      NotifyPurchaserJob.perform_later(@form.order)  # non-essential
-      NotifyMerchantJob.perform_later(@form.order)   # non-essential
-      redirect_to @form.order
-    else
-      render :new
-    end
-  end
+ActiveRecord::Base.transaction do
+  @form.order.save!   # essential
+  cart.complete!      # essential
 end
+NotifyPurchaserJob.perform_later(@form.order)  # non-essential
+NotifyMerchantJob.perform_later(@form.order)   # non-essential
 ```
 
-The distinction between essential and non-essential I/O is visible in the procedure. Distributing the workflow is a local change.
+The distinction is visible at the call site. Distributing the workflow is a local change.
 
-**Tests mirror the procedure.** When a procedure is explicit about its inputs and I/O, the test setup writes itself. Every I/O fetch in the procedure corresponds to an artifact you create in the setup. Every input corresponds to a param or fixture. There are no mystery guests. If a test fails because a record doesn't exist, that record should be findable in the procedure. An `after_create` callback that enqueues a job or touches a second table means your test setup needs records you can't predict from reading the procedure. Explicit procedures eliminate that surprise: read the procedure top to bottom and you know exactly what to create.
+**Tests mirror the procedure.** When a procedure is explicit about its inputs and I/O, the test setup writes itself. Every I/O fetch in the procedure corresponds to an artifact you create in the setup. Every input corresponds to a param or fixture. There are no mystery guests. If a test fails because a record doesn't exist, that record should be findable in the procedure. An `after_create` callback that enqueues a job or touches a second table means your test setup needs records you can't predict from reading the procedure. Explicit procedures eliminate that surprise.
+
+The create action above fetches `current_user` and `current_user.current_cart`. The test setup is a direct mirror:
 
 ```ruby
-# Procedure: inputs and I/O fetches are visible
-class OrdersController < ApplicationController
-  def create
-    cart  = current_user.current_cart           # I/O fetch
-    @form = OrderForm.new(cart, order_params)
-    if @form.valid?
-      ActiveRecord::Base.transaction do
-        @form.order.save!
-        cart.complete!
-      end
-      NotifyPurchaserJob.perform_later(@form.order)
-      NotifyMerchantJob.perform_later(@form.order)
-      redirect_to @form.order
-    else
-      render :new
-    end
-  end
-end
-
-# Test setup is a direct mirror
-user = create(:user)              # current_user (procedure input)
-create(:cart, user: user)         # current_user.current_cart (I/O in procedure)
+user = create(:user)          # current_user (procedure input)
+create(:cart, user: user)     # current_user.current_cart (I/O in procedure)
 
 post :create, params: { order: { quantity: 2 } }
 ```

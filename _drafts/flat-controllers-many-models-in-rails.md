@@ -13,7 +13,7 @@ The testing experience makes the gap concrete. You want to validate your change,
 
 ## The judgment test
 
-Here's how you know something is hiding: open any procedure (a controller action, a job, a script) and try to narrate it to a non-technical stakeholder in near real-time. Can you see all the inputs? Can you account for every mutation? If you can't, something is hiding. Callbacks, side-effecting models, logic tucked into scopes: all of them fail this test.
+Here's how you know something is hiding: open any procedure (a controller action, a job, a script) and try to narrate it to a colleague. Can you see all the inputs? Can you account for every mutation? If you can't, something is hiding. Callbacks, side-effecting models, logic tucked into scopes: all of them fail this test.
 
 Passing it requires a deliberate choice about which layer owns what.
 
@@ -75,7 +75,7 @@ This isn't a defense of long procedures. Every line in a procedure should earn i
 
 This is what separates a long, thin procedure from a fat one. A fat controller grows because logic accumulates: validations, decisions, business rules all collapse into one place. A long, thin controller grows because the domain is genuinely complex: ten real business steps, each visible, each named. The discipline that keeps it thin is removing what isn't a business step. A single-use variable that just renames a concept is noise. A conditional that could be a named policy object is noise. Length from business necessity is fine. Length from accumulated detail is the problem.
 
-In practice: avoid creating a variable in a procedure unless it's used at least twice. A variable used once is usually just an alias, a rename that adds a line without adding meaning. A variable used twice signals intentionality: you're holding a result to coordinate two subsequent steps, which is exactly what a procedure is for. When you find yourself assigning a variable and using it once, inline it. When a variable earns a second use, it's earning its name.
+A concrete form of that noise: single-use variables. In practice: avoid creating a variable in a procedure unless it's used at least twice. A variable used once is usually just an alias, a rename that adds a line without adding meaning. A variable used twice signals intentionality: you're holding a result to coordinate two subsequent steps, which is exactly what a procedure is for. When you find yourself assigning a variable and using it once, inline it. When a variable earns a second use, it's earning its name.
 
 ## Transformations, I/O, and where AR models fit
 
@@ -221,8 +221,6 @@ post :create, params: { order: { quantity: 2 } }
 ## Getting there
 
 The most direct first step: find a model callback that triggers a side effect (an email, a job, a third-party call) and move it inline into the controller. The controller gets longer. That discomfort is informative. What you're feeling is the explicit declaration of work that was previously invisible. The instinct to re-extract it is the DRY instinct, and it's worth sitting with the resistance before acting on it. Explicit side effects aren't noise; the explicitness is the point.
-
-This pattern earns its keep in proportion to the number of control planes in the system. In an app with a single controller layer and no background jobs, the benefits are modest. The argument gets sharper as the system grows: a customer-facing controller, an admin controller, an ops controller, background jobs, Rake tasks, all orchestrating against the same data. In that environment, a callback that fires on every save is a liability. An ops engineer writing a script to handle a support edge case shouldn't have to reason about whether it'll trigger customer-facing emails. When each control plane is explicit and side effects live in procedures, they don't.
 
 The Rails console belongs in this list too; it's part of the control plane and often overlooked. A developer running `Order.create(...)` against production has entered an orchestration context. If that model has I/O-mutating callbacks, the console carries the same risk as any script or job. When side effects are inline and visible, that risk is legible.
 

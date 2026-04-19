@@ -5,7 +5,7 @@ title: Flat Controllers, Many Models in Rails
 
 # Flat Controllers, Many Models in Rails
 
-The goal isn't to maintain a codebase. It's to evolve it — to introduce something that didn't exist before, to move an idea from concept to production before the window closes. Radical change is the work. The constraint on that work is almost always comprehension: you can't responsibly reshape what you don't understand.
+The goal of a product engineer isn't to maintain a codebase. It's to evolve it — to introduce something that didn't exist before, to move an idea from concept to production before the window closes. Radical change is the work. The constraint on that work is almost always comprehension: you can't responsibly reshape what you don't understand.
 
 That understanding is often missing. Not as a character flaw — codebases grow in ways that obscure their own behavior. A change that looks local turns out to touch five things. A callback fires somewhere downstream. A scope with a side effect triggers a query you didn't write. The more the system has grown, the more the gap between "what this code appears to do" and "what this code actually does" widens.
 
@@ -13,7 +13,7 @@ The testing experience makes the gap concrete. You want to validate your change,
 
 ## The judgment test
 
-Here's how you know something is hiding: open any procedure — a controller action, a job, a worker — and try to narrate it to a non-technical stakeholder in near real-time. Can you see all the inputs? Can you account for every mutation? If you can't, something is hiding. Callbacks, side-effecting models, logic tucked into scopes — all of them fail this test.
+Here's how you know something is hiding: open any procedure — a controller action, a job, a script — and try to narrate it to a non-technical stakeholder in near real-time. Can you see all the inputs? Can you account for every mutation? If you can't, something is hiding. Callbacks, side-effecting models, logic tucked into scopes — all of them fail this test.
 
 Passing it requires a deliberate choice about which layer owns what.
 
@@ -95,20 +95,22 @@ end
 The procedure calls it and owns the decision:
 
 ```ruby
-def update
-  unless OrderPolicy.editable?(current_user, @order)
-    return redirect_to @order, alert: "Not authorized"
-  end
+class OrdersController < ApplicationController
+  def update
+    unless OrderPolicy.editable?(current_user, @order)
+      return redirect_to @order, alert: "Not authorized"
+    end
 
-  if @order.update(order_params)
-    redirect_to @order
-  else
-    render :edit
+    if @order.update(order_params)
+      redirect_to @order
+    else
+      render :edit
+    end
   end
 end
 ```
 
-No framework, no DSL, no implicit query. The policy answers one question. The procedure decides what happens next.
+The policy answers one question. The procedure decides what happens next.
 
 ```ruby
 class OrderForm
@@ -126,7 +128,7 @@ end
 
 **I/O objects** are anything that touches external state. **Query objects** are I/O — they read from the database and belong in the procedure's explicit sequence, not inside a model method or scope. I/O deserves particular attention because I/O produces *artifacts*: records other flows read, emails users receive, jobs workers process. These artifacts carry forward into downstream user experiences and business outcomes. When I/O is hidden in a callback or a side-effecting scope, you lose the ability to trace which procedures produce which artifacts and what downstream work they trigger.
 
-**ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: persistence. That's fine — validations and pure callbacks are part of the model's job. The problem is callbacks that trigger I/O side effects: sending an email, enqueuing a job, calling an external API. These create an implicit "always" contract — any caller that saves this model gets the side effects, whether it wants them or not. Web requests, background jobs, bulk imports, and test factories all fire the same callback. When that contract breaks down — and it will — the fix is `skip_callback`, which is the codebase admitting the "always" was never an invariant.
+**ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: database persistence. That's fine — validations and pure callbacks are part of the model's job. The problem is callbacks that trigger I/O side effects: sending an email, enqueuing a job, calling an external API. These create an implicit "always" contract — any caller that saves this model gets the side effects, whether it wants them or not. Web requests, background jobs, bulk imports, and test factories all fire the same callback. When that contract breaks down — and it will — the fix is `skip_callback`, which is the codebase admitting the "always" was never an invariant.
 
 ## Scenarios where this earns its keep
 
@@ -138,7 +140,7 @@ class OrderWithPaymentForm
   attr_reader :order, :payment
 
   def initialize(cart, payment, params = {})
-    @order   = Order.new(user: cart.user, cart: cart).tap { |o| o.assign_attributes(params[:order]   || {}) }
+    @order   = Order.new(user: cart.user, cart: cart).tap { |o| o.assign_attributes(params[:order] || {}) }
     @payment = payment.tap { |p| p.assign_attributes(params[:payment] || {}) }
     super(params)
   end

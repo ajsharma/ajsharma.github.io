@@ -32,19 +32,21 @@ This framing tells you what each layer is *for* and what it should never do.
 A procedure is an explicit sequence of steps triggered by an external event. Controllers are procedures — but so are Jobs, Workers, Mailers, and Rake tasks. The same discipline applies to all of them: read top-to-bottom and see every input and every mutation.
 
 ```ruby
-def create
-  cart  = current_user.current_cart
-  @form = OrderForm.new(cart, order_params)
-  if @form.valid?
-    ActiveRecord::Base.transaction do
-      @form.order.save!
-      cart.complete!
+class OrdersController < ApplicationController
+  def create
+    cart  = current_user.current_cart
+    @form = OrderForm.new(cart, order_params)
+    if @form.valid?
+      ActiveRecord::Base.transaction do
+        @form.order.save!
+        cart.complete!
+      end
+      NotifyPurchaserJob.perform_later(@form.order)
+      NotifyMerchantJob.perform_later(@form.order)
+      redirect_to @form.order
+    else
+      render :new
     end
-    NotifyPurchaserJob.perform_later(@form.order)
-    NotifyMerchantJob.perform_later(@form.order)
-    redirect_to @form.order
-  else
-    render :new
   end
 end
 ```
@@ -150,20 +152,22 @@ class OrderWithPaymentForm
   def payment_valid; errors.add(:payment, "invalid") unless payment.valid?; end
 end
 
-def create
-  cart  = current_user.current_cart
-  @form = OrderWithPaymentForm.new(cart, Payment.new, order_params)
-  if @form.valid?
-    ActiveRecord::Base.transaction do
-      @form.order.save!
-      @form.payment.save!
-      cart.complete!
+class OrdersController < ApplicationController
+  def create
+    cart  = current_user.current_cart
+    @form = OrderWithPaymentForm.new(cart, Payment.new, order_params)
+    if @form.valid?
+      ActiveRecord::Base.transaction do
+        @form.order.save!
+        @form.payment.save!
+        cart.complete!
+      end
+      NotifyPurchaserJob.perform_later(@form.order)
+      NotifyMerchantJob.perform_later(@form.order)
+      redirect_to @form.order
+    else
+      render :new
     end
-    NotifyPurchaserJob.perform_later(@form.order)
-    NotifyMerchantJob.perform_later(@form.order)
-    redirect_to @form.order
-  else
-    render :new
   end
 end
 ```
@@ -183,19 +187,21 @@ end
 **Moving non-essential work into jobs.** When a procedure lists its I/O explicitly, it's easy to see which operations must happen synchronously and which don't. Saving the order must happen before we can redirect. Notifying the purchaser and merchant don't need to block the response. When that work is hidden in a callback, extracting it means touching the model. When it's a line in the procedure, extracting it means swapping `deliver_now` for `perform_later`.
 
 ```ruby
-def create
-  cart  = current_user.current_cart
-  @form = OrderForm.new(cart, order_params)
-  if @form.valid?
-    ActiveRecord::Base.transaction do
-      @form.order.save!                  # essential — must happen now
-      cart.complete!   # essential — must happen now
+class OrdersController < ApplicationController
+  def create
+    cart  = current_user.current_cart
+    @form = OrderForm.new(cart, order_params)
+    if @form.valid?
+      ActiveRecord::Base.transaction do
+        @form.order.save!                  # essential — must happen now
+        cart.complete!                     # essential — must happen now
+      end
+      NotifyPurchaserJob.perform_later(@form.order)  # non-essential — can defer
+      NotifyMerchantJob.perform_later(@form.order)   # non-essential — can defer
+      redirect_to @form.order
+    else
+      render :new
     end
-    NotifyPurchaserJob.perform_later(@form.order)  # non-essential — can defer
-    NotifyMerchantJob.perform_later(@form.order)   # non-essential — can defer
-    redirect_to @form.order
-  else
-    render :new
   end
 end
 ```
@@ -206,19 +212,21 @@ The distinction between essential and non-essential I/O is visible in the proced
 
 ```ruby
 # Procedure — inputs and I/O fetches are visible
-def create
-  cart  = current_user.current_cart           # I/O fetch
-  @form = OrderForm.new(cart, order_params)
-  if @form.valid?
-    ActiveRecord::Base.transaction do
-      @form.order.save!
-      cart.complete!
+class OrdersController < ApplicationController
+  def create
+    cart  = current_user.current_cart           # I/O fetch
+    @form = OrderForm.new(cart, order_params)
+    if @form.valid?
+      ActiveRecord::Base.transaction do
+        @form.order.save!
+        cart.complete!
+      end
+      NotifyPurchaserJob.perform_later(@form.order)
+      NotifyMerchantJob.perform_later(@form.order)
+      redirect_to @form.order
+    else
+      render :new
     end
-    NotifyPurchaserJob.perform_later(@form.order)
-    NotifyMerchantJob.perform_later(@form.order)
-    redirect_to @form.order
-  else
-    render :new
   end
 end
 

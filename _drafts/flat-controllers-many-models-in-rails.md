@@ -65,8 +65,6 @@ end
 
 Both read as a flat sequence. No hidden steps.
 
-Web requests, jobs, and tasks are the application's **control plane** — the only layer whose job is orchestration. Naming this matters. Service objects fail long-term not because they're wrong in principle, but because they create a second control plane. Engineers can't tell whether orchestration belongs in the controller or the service. Services start calling jobs. Jobs call other services. You end up with two layers that both orchestrate, neither with full visibility.
-
 This isn't a defense of long procedures. Every line in a procedure should earn its place as a business step. Noise — intermediate variables that just rename concepts, complex rules embedded inline — should be extracted. The question is what kind of extraction. A procedure that grows because it has ten genuine business steps is fine. A procedure cluttered with implementation detail that could be named and isolated is not. Extract the detail; keep the orchestration.
 
 This is what separates a long, thin procedure from a fat one. A fat controller grows because logic accumulates — validations, decisions, business rules all collapse into one place. A long, thin controller grows because the domain is genuinely complex: ten real business steps, each visible, each named. The discipline that keeps it thin is removing what isn't a business step. A single-use variable that just renames a concept is noise. A conditional that could be a named policy object is noise. Length from business necessity is fine. Length from accumulated detail is the problem.
@@ -118,6 +116,8 @@ end
 
 The policy answers one question. The procedure decides what happens next.
 
+Form objects apply the same principle to validation. A form takes a cart and user-submitted params, validates them, and populates a new order. No persistence — that belongs in the procedure.
+
 ```ruby
 class OrderForm
   include ActiveModel::Model
@@ -135,6 +135,12 @@ end
 **I/O objects** are anything that touches external state. **Query objects** are I/O — they read from the database and belong in the procedure's explicit sequence, not inside a model method or scope. I/O deserves particular attention because I/O produces *artifacts*: records other flows read, emails users receive, jobs workers process. These artifacts carry forward into downstream user experiences and business outcomes. When I/O is hidden in a callback or a side-effecting scope, you lose the ability to trace which procedures produce which artifacts and what downstream work they trigger.
 
 **ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: database persistence. That's fine — validations and pure callbacks are part of the model's job. The problem is callbacks that trigger I/O side effects: sending an email, enqueuing a job, calling an external API. These create an implicit "always" contract — any caller that saves this model gets the side effects, whether it wants them or not. Web requests, background jobs, bulk imports, and test factories all fire the same callback. When that contract breaks down — and it will — the fix is `skip_callback`, which is the codebase admitting the "always" was never an invariant.
+
+## One control plane
+
+Web requests, jobs, and tasks are the application's **control plane** — the only layer whose job is orchestration. Naming this matters because it identifies what must stay singular. Service objects fail long-term not because they're wrong in principle, but because they create a second control plane. Engineers can't tell whether orchestration belongs in the controller or the service. Services start calling jobs. Jobs call other services. You end up with two layers that both orchestrate, neither with full visibility.
+
+The taxonomy makes the failure mode legible: a service object that fetches records, validates inputs, saves a model, and enqueues a job isn't a transformation — it's a procedure in disguise. It orchestrates. Moving it out of the controller doesn't remove the orchestration; it just hides it one level deeper and splits the reader's attention between two places.
 
 ## Scenarios where this earns its keep
 

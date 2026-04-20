@@ -144,6 +144,17 @@ end
 
 ## Scenarios where this earns its keep
 
+**Tests mirror the procedure.** When a procedure is explicit about its inputs and I/O, the test setup writes itself. Every I/O fetch in the procedure corresponds to an artifact you create in the setup. Every input corresponds to a param or fixture. There are no mystery guests. If a test fails because a record doesn't exist, that record should be findable in the procedure. An `after_create` callback that enqueues a job or touches a second table means your test setup needs records you can't predict from reading the procedure. Explicit procedures eliminate that surprise.
+
+The `create` action in the Procedures section fetches `current_user` and `current_user.current_cart`. The test setup is a direct mirror:
+
+```ruby
+user = create(:user)          # current_user (procedure input)
+create(:cart, user: user)     # current_user.current_cart (I/O in procedure)
+
+post :create, params: { order: { quantity: 2 } }
+```
+
 **Multiple models in one action.** A create action that saves an order and a payment. A Form object holds references to both; the controller still reads as a flat sequence:
 
 ```ruby
@@ -212,17 +223,6 @@ NotifyMerchantJob.perform_later(@form.order)   # non-essential
 ```
 
 The split is visible at the call site; moving work to a job is a one-line change.
-
-**Tests mirror the procedure.** When a procedure is explicit about its inputs and I/O, the test setup writes itself. Every I/O fetch in the procedure corresponds to an artifact you create in the setup. Every input corresponds to a param or fixture. There are no mystery guests. If a test fails because a record doesn't exist, that record should be findable in the procedure. An `after_create` callback that enqueues a job or touches a second table means your test setup needs records you can't predict from reading the procedure. Explicit procedures eliminate that surprise.
-
-The create action above fetches `current_user` and `current_user.current_cart`. The test setup is a direct mirror:
-
-```ruby
-user = create(:user)          # current_user (procedure input)
-create(:cart, user: user)     # current_user.current_cart (I/O in procedure)
-
-post :create, params: { order: { quantity: 2 } }
-```
 
 ## Getting there
 

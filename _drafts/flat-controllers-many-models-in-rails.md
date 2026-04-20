@@ -158,8 +158,14 @@ class OrderWithPaymentForm
   end
 
   validate :order_valid, :payment_valid
-  def order_valid;   errors.add(:order,   "invalid") unless order.valid?;   end
-  def payment_valid; errors.add(:payment, "invalid") unless payment.valid?; end
+
+  def order_valid
+    errors.add(:order, "invalid") unless order.valid?
+  end
+
+  def payment_valid
+    errors.add(:payment, "invalid") unless payment.valid?
+  end
 end
 
 class OrdersController < ApplicationController

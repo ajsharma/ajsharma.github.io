@@ -7,7 +7,7 @@ title: Flat Controllers, Many Models in Rails
 
 The goal of a product engineer isn't to maintain a codebase. It's to evolve it: to introduce something that didn't exist before, to move an idea from concept to production before the window closes. Radical change is the work. The constraint on that work is almost always comprehension: you can't responsibly reshape what you don't understand.
 
-That understanding is often missing. Not as a character flaw. Codebases grow in ways that obscure their own behavior. A change that looks local turns out to touch five things. A callback fires somewhere downstream. A scope with a side effect triggers a query you didn't write. The more the system has grown, the more the gap between "what this code appears to do" and "what this code actually does" widens.
+That understanding is often missing. Codebases grow in ways that obscure their own behavior. A change that looks local turns out to touch five things. A callback fires somewhere downstream. A scope with a side effect triggers a query you didn't write. The more the system has grown, the more the gap between "what this code appears to do" and "what this code actually does" widens.
 
 The testing experience makes the gap concrete. You want to validate your change, but you don't know what state the world needs to be in at the start. What records do you create? Which associations matter? You add factories until the test passes, then wonder if the setup reflects anything real. As the data model grows, the gap between "setup that makes tests pass" and "setup that reflects real-world behavior" widens. You end up with tests you can't fully trust, not because the assertions are wrong, but because you aren't sure the setup is right.
 
@@ -31,7 +31,7 @@ This framing tells you what each layer is *for* and what it should never do.
 
 Web requests, jobs, and tasks are the application's **control plane**: the only layer whose job is orchestration. Naming this matters because it identifies what must stay singular. Service objects fail long-term not because they're wrong in principle, but because they create a second control plane. Engineers can't tell whether orchestration belongs in the controller or the service. Services start calling jobs. Jobs call other services. You end up with two layers that both orchestrate, neither with full visibility.
 
-The taxonomy makes the failure mode legible: a service object that fetches records, validates inputs, saves a model, and enqueues a job isn't a transformation; it's a procedure in disguise. It orchestrates. Moving it out of the controller doesn't remove the orchestration; it just hides it one level deeper and splits the reader's attention between two places.
+That framing makes the failure mode clear: a service object that fetches records, validates inputs, saves a model, and enqueues a job isn't a transformation; it's a procedure in disguise. Moving it out of the controller doesn't remove the orchestration; it just hides it one level deeper and splits the reader's attention between two places.
 
 ## Procedures
 
@@ -69,19 +69,19 @@ class SendWeeklyDigestJob < ApplicationJob
 end
 ```
 
-Both read as a flat sequence. No hidden steps.
+Both read as flat sequences with no hidden steps.
 
 This isn't a defense of long procedures. Every line in a procedure should earn its place as a business step. Noise (intermediate variables that just rename concepts, complex rules embedded inline) should be extracted. The question is what kind of extraction. A procedure that grows because it has ten genuine business steps is fine. A procedure cluttered with implementation detail that could be named and isolated is not. Extract the detail; keep the orchestration.
 
 This is what separates a long, thin procedure from a fat one. A fat controller grows because logic accumulates: validations, decisions, business rules all collapse into one place. A long, thin controller grows because the domain is genuinely complex: ten real business steps, each visible, each named. The discipline that keeps it thin is removing what isn't a business step. A single-use variable that just renames a concept is noise. A conditional that could be a named policy object is noise. Length from business necessity is fine. Length from accumulated detail is the problem.
 
-A concrete form of that noise: single-use variables. In practice: avoid creating a variable in a procedure unless it's used at least twice. A variable used once is usually just an alias, a rename that adds a line without adding meaning. A variable used twice signals intentionality: you're holding a result to coordinate two subsequent steps, which is exactly what a procedure is for. When you find yourself assigning a variable and using it once, inline it. When a variable earns a second use, it's earning its name.
+A concrete form of that noise: single-use variables. In practice: avoid creating a variable in a procedure unless it's used at least twice. A variable used once is usually just an alias, a rename that adds a line without adding meaning. A variable used twice has a reason to exist: you're holding a result to coordinate two subsequent steps, which is exactly what a procedure is for. When you find yourself assigning a variable and using it once, inline it.
 
 ## Transformations, I/O, and where AR models fit
 
 **Transformations** are objects with no external side effects. **Form objects** are the canonical example: input is a model plus user-submitted params; output is a Boolean (valid?) plus the populated model. No persistence; that belongs in the procedure. **Permission objects** are another: input is a user and a resource; output is a Boolean. No queries triggered implicitly, no state changed; the procedure decides what to do with the result.
 
-The decision rule for whether an abstraction belongs in this layer: does it *orchestrate*, or does it *answer*? A permission object answers: given this user and resource, can they act? A form object answers: are these params valid? An object that fetches records, delegates to another service, and enqueues a job orchestrates: that belongs in the procedure, written out explicitly. Extractions that answer are signal. Extractions that orchestrate are a second control plane.
+The decision rule for whether an abstraction belongs in this layer: does it *orchestrate*, or does it *answer*? A permission object answers: given this user and resource, can they act? A form object answers: are these params valid? An object that fetches records, delegates to another service, and enqueues a job orchestrates: that belongs in the procedure, written out explicitly. Extractions that answer belong here. Extractions that orchestrate belong in the procedure, written out explicitly.
 
 A permission object in plain Ruby:
 
@@ -138,7 +138,7 @@ class OrderForm
 end
 ```
 
-**I/O objects** are anything that touches external state. **Query objects** are I/O: they read from the database and belong in the procedure's explicit sequence, not inside a model method or scope. I/O deserves particular attention because I/O produces *artifacts*: records other flows read, emails users receive, jobs workers process. These artifacts carry forward into downstream user experiences and business outcomes. When I/O is hidden in a callback or a side-effecting scope, you lose the ability to trace which procedures produce which artifacts and what downstream work they trigger.
+**I/O objects** are anything that touches external state. **Query objects** are I/O: they read from the database and belong in the procedure's explicit sequence, not inside a model method or scope. I/O deserves particular attention because I/O produces *artifacts*: records other flows read, emails users receive, jobs workers process. When I/O is hidden in a callback or a side-effecting scope, you lose the ability to trace which procedures produce which artifacts and what downstream work they trigger.
 
 **ActiveRecord models** span transformations (validations, domain methods) and exactly *one* I/O boundary: database persistence. That's fine; validations and pure callbacks are part of the model's job. The problem is callbacks that trigger I/O side effects: sending an email, enqueuing a job, calling an external API. These create an implicit "always" contract: any caller that saves this model gets the side effects, whether it wants them or not. Web requests, background jobs, bulk imports, and test factories all fire the same callback. When that contract breaks down (and it will), the fix is `skip_callback`, which is the codebase admitting the "always" was never an invariant.
 
@@ -211,7 +211,7 @@ NotifyPurchaserJob.perform_later(@form.order)  # non-essential
 NotifyMerchantJob.perform_later(@form.order)   # non-essential
 ```
 
-The distinction is visible at the call site. Distributing the workflow is a local change.
+The split is visible at the call site; moving work to a job is a one-line change.
 
 **Tests mirror the procedure.** When a procedure is explicit about its inputs and I/O, the test setup writes itself. Every I/O fetch in the procedure corresponds to an artifact you create in the setup. Every input corresponds to a param or fixture. There are no mystery guests. If a test fails because a record doesn't exist, that record should be findable in the procedure. An `after_create` callback that enqueues a job or touches a second table means your test setup needs records you can't predict from reading the procedure. Explicit procedures eliminate that surprise.
 
@@ -226,8 +226,8 @@ post :create, params: { order: { quantity: 2 } }
 
 ## Getting there
 
-The most direct first step: find a model callback that triggers a side effect (an email, a job, a third-party call) and move it inline into the controller. The controller gets longer. That discomfort is informative. What you're feeling is the explicit declaration of work that was previously invisible. The instinct to re-extract it is the DRY instinct, and it's worth sitting with the resistance before acting on it. Explicit side effects aren't noise; the explicitness is the point.
+The most direct first step: find a model callback that triggers a side effect (an email, a job, a third-party call) and move it inline into the controller. The controller gets longer. That length is the explicit declaration of work that was previously invisible. The instinct to re-extract it is the DRY instinct, and it's worth resisting before acting on it. Explicit side effects aren't noise; the explicitness is the point.
 
 The Rails console belongs in this list too; it's part of the control plane and often overlooked. A developer running `Order.create(...)` against production has entered an orchestration context. If that model has I/O-mutating callbacks, the console carries the same risk as any script or job. When side effects are inline and visible, that risk is legible.
 
-The opening problem was a change that looked local but touched five things. This structure doesn't eliminate complexity; it makes the five things visible. Confidence in a change becomes local: open the procedure, read it top to bottom, and you know exactly what moves.
+The opening problem was a change that looked local but touched five things. This structure doesn't eliminate complexity; it makes the five things visible. Open any procedure, read it top to bottom, and you know exactly what moves.

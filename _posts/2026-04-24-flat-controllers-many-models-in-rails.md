@@ -80,11 +80,10 @@ Here's what a long, thin procedure looks like when the domain demands it—check
 ```ruby
 class CheckoutsController < ApplicationController
   def create
-    cart     = current_user.current_cart
-    @form    = CheckoutForm.new(cart, checkout_params)
+    @form    = CheckoutForm.new(current_user.current_cart, checkout_params)
     return render :new unless @form.valid?
 
-    coupon   = CouponPolicy.apply(cart, params[:coupon_code])
+    coupon   = CouponPolicy.apply(current_user.current_cart, params[:coupon_code])
     shipment = ShipmentQuote.call(@form.address)
 
     @form.order.discount = coupon.amount
@@ -93,7 +92,7 @@ class CheckoutsController < ApplicationController
     ActiveRecord::Base.transaction do
       @form.order.save!
       @form.payment.save!
-      cart.complete!
+      current_user.current_cart.complete!
       coupon.redeem!
     end
 
@@ -112,7 +111,7 @@ class CheckoutsController < ApplicationController
 end
 ```
 
-Every variable earns its place: `cart` is used to build the form and completed inside the transaction; `coupon` contributes its discount amount to the order and is redeemed; `shipment` supplies the cost. The fulfillment decision is visible at the call site—adding a new fulfillment type means adding a branch here, not hunting for a callback. The procedure is long because checkout is genuinely complex—not because detail leaked in.
+Every variable earns its place: `coupon` contributes its discount amount to the order and is redeemed inside the transaction; `shipment` supplies the cost. The fulfillment decision is visible at the call site—adding a new fulfillment type means adding a branch here, not hunting for a callback. The procedure is long because checkout is genuinely complex—not because detail leaked in.
 
 ## Transformations, I/O, and where AR models fit
 

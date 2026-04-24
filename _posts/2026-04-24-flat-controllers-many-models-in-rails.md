@@ -75,7 +75,7 @@ This is what separates a long, thin procedure from a fat one. A fat controller g
 
 A concrete form of that noise: single-use variables. In practice: avoid creating a variable in a procedure unless it's used at least twice. A variable used once is usually just an alias, a rename that adds a line without adding meaning. A variable used twice has a reason to exist: you're holding a result to coordinate two subsequent steps, which is exactly what a procedure is for. When you find yourself assigning a variable and using it once, inline it.
 
-Here's what a long, thin procedure looks like when the domain demands it—checkout with coupon, shipping, payment, and async follow-up work:
+Here's what a long, thin procedure looks like when the domain demands it—checkout with coupon, shipping, payment, async notifications, and a fulfillment routing decision:
 
 ```ruby
 class CheckoutsController < ApplicationController
@@ -85,11 +85,12 @@ class CheckoutsController < ApplicationController
     return render :new unless @form.valid?
 
     coupon   = CouponPolicy.apply(cart, params[:coupon_code])
-    shipment = ShipmentQuote.new(@form.address).call
+    shipment = ShipmentQuote.call(@form.address)
+
+    @form.order.discount = coupon.amount
+    @form.order.shipping = shipment.cost
 
     ActiveRecord::Base.transaction do
-      @form.order.discount = coupon.amount
-      @form.order.shipping = shipment.cost
       @form.order.save!
       @form.payment.save!
       cart.complete!
@@ -99,14 +100,19 @@ class CheckoutsController < ApplicationController
     InventoryReservationJob.perform_later(@form.order)
     NotifyPurchaserJob.perform_later(@form.order)
     NotifyMerchantJob.perform_later(@form.order)
-    FulfillmentJob.perform_later(@form.order) if @form.order.digital?
+
+    case @form.order.fulfillment_type
+    when :digital  then FulfillmentJob.perform_later(@form.order)
+    when :physical then ShipmentJob.perform_later(@form.order)
+    when :pickup   then PickupNotifyJob.perform_later(@form.order)
+    end
 
     redirect_to @form.order
   end
 end
 ```
 
-Every variable earns its place: `cart` is used to build the form and completed inside the transaction; `coupon` contributes its discount amount to the order and is redeemed; `shipment` supplies the cost. No line is an alias for another. The procedure is long because checkout is genuinely complex—not because detail leaked in.
+Every variable earns its place: `cart` is used to build the form and completed inside the transaction; `coupon` contributes its discount amount to the order and is redeemed; `shipment` supplies the cost. The fulfillment decision is visible at the call site—adding a new fulfillment type means adding a branch here, not hunting for a callback. The procedure is long because checkout is genuinely complex—not because detail leaked in.
 
 ## Transformations, I/O, and where AR models fit
 

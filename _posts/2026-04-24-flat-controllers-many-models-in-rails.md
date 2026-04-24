@@ -101,7 +101,7 @@ class CheckoutsController < ApplicationController
     NotifyPurchaserJob.perform_later(@form.order)
     NotifyMerchantJob.perform_later(@form.order)
 
-    case @form.order.fulfillment_type
+    case RouteFulfillment.call(@form.order)
     when :digital  then FulfillmentJob.perform_later(@form.order)
     when :physical then ShipmentJob.perform_later(@form.order)
     when :pickup   then PickupNotifyJob.perform_later(@form.order)

@@ -1,9 +1,7 @@
 ---
-layout: default
+layout: post
 title: Flat Controllers, Many Models in Rails
 ---
-
-# Flat Controllers, Many Models in Rails
 
 The goal of a product engineer isn't to maintain a codebase. It's to evolve it: to introduce something that didn't exist before, to move an idea from concept to production before the window closes. Radical change is the work. The constraint on that work is almost always comprehension: you can't responsibly reshape what you don't understand.
 
@@ -76,6 +74,39 @@ This isn't a defense of long procedures. Every line in a procedure should earn i
 This is what separates a long, thin procedure from a fat one. A fat controller grows because logic accumulates: validations, decisions, business rules all collapse into one place. A long, thin controller grows because the domain is genuinely complex: ten real business steps, each visible, each named. The discipline that keeps it thin is removing what isn't a business step. A single-use variable that just renames a concept is noise. A conditional that could be a named policy object is noise. Length from business necessity is fine. Length from accumulated detail is the problem.
 
 A concrete form of that noise: single-use variables. In practice: avoid creating a variable in a procedure unless it's used at least twice. A variable used once is usually just an alias, a rename that adds a line without adding meaning. A variable used twice has a reason to exist: you're holding a result to coordinate two subsequent steps, which is exactly what a procedure is for. When you find yourself assigning a variable and using it once, inline it.
+
+Here's what a long, thin procedure looks like when the domain demands it—checkout with coupon, shipping, payment, and async follow-up work:
+
+```ruby
+class CheckoutsController < ApplicationController
+  def create
+    cart     = current_user.current_cart
+    @form    = CheckoutForm.new(cart, checkout_params)
+    return render :new unless @form.valid?
+
+    coupon   = CouponPolicy.apply(cart, params[:coupon_code])
+    shipment = ShipmentQuote.new(@form.address).call
+
+    ActiveRecord::Base.transaction do
+      @form.order.discount = coupon.amount
+      @form.order.shipping = shipment.cost
+      @form.order.save!
+      @form.payment.save!
+      cart.complete!
+      coupon.redeem!
+    end
+
+    InventoryReservationJob.perform_later(@form.order)
+    NotifyPurchaserJob.perform_later(@form.order)
+    NotifyMerchantJob.perform_later(@form.order)
+    FulfillmentJob.perform_later(@form.order) if @form.order.digital?
+
+    redirect_to @form.order
+  end
+end
+```
+
+Every variable earns its place: `cart` is used to build the form and completed inside the transaction; `coupon` contributes its discount amount to the order and is redeemed; `shipment` supplies the cost. No line is an alias for another. The procedure is long because checkout is genuinely complex—not because detail leaked in.
 
 ## Transformations, I/O, and where AR models fit
 

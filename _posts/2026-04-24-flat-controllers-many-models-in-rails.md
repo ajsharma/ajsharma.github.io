@@ -1,9 +1,7 @@
 ---
-layout: default
+layout: post
 title: Flat Controllers, Many Models in Rails
 ---
-
-# Flat Controllers, Many Models in Rails
 
 The goal of a product engineer isn't to maintain a codebase. It's to evolve it: to introduce something that didn't exist before, to move an idea from concept to production before the window closes. Radical change is the work. The constraint on that work is almost always comprehension: you can't responsibly reshape what you don't understand.
 

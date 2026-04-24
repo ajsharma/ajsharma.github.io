@@ -111,7 +111,42 @@ class CheckoutsController < ApplicationController
 end
 ```
 
-Every variable earns its place: `coupon` contributes its discount amount to the order and is redeemed inside the transaction; `shipment` supplies the cost. The fulfillment decision is visible at the call site—adding a new fulfillment type means adding a branch here, not hunting for a callback. The procedure is long because checkout is genuinely complex—not because detail leaked in.
+One variable doesn't earn its place: `shipment` is assigned and used exactly once—`shipment.cost` on the next line. That's the alias pattern from above. Applying the rule consistently:
+
+```ruby
+class CheckoutsController < ApplicationController
+  def create
+    @form    = CheckoutForm.new(current_user.current_cart, checkout_params)
+    return render :new unless @form.valid?
+
+    coupon = CouponPolicy.apply(current_user.current_cart, params[:coupon_code])
+
+    @form.order.discount = coupon.amount
+    @form.order.shipping = ShipmentQuote.call(@form.address).cost
+
+    ActiveRecord::Base.transaction do
+      @form.order.save!
+      @form.payment.save!
+      current_user.current_cart.complete!
+      coupon.redeem!
+    end
+
+    InventoryReservationJob.perform_later(@form.order)
+    NotifyPurchaserJob.perform_later(@form.order)
+    NotifyMerchantJob.perform_later(@form.order)
+
+    case RouteFulfillment.call(@form.order)
+    when :digital  then FulfillmentJob.perform_later(@form.order)
+    when :physical then ShipmentJob.perform_later(@form.order)
+    when :pickup   then PickupNotifyJob.perform_later(@form.order)
+    end
+
+    redirect_to @form.order
+  end
+end
+```
+
+`coupon` still earns its variable: it contributes its discount amount before the transaction and is redeemed inside it—two steps, one coordinator. The fulfillment decision is visible at the call site—adding a new fulfillment type means adding a branch here, not hunting for a callback. The procedure is long because checkout is genuinely complex—not because detail leaked in.
 
 ## Transformations, I/O, and where AR models fit
 

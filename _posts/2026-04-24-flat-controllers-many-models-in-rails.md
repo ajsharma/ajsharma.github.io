@@ -38,19 +38,21 @@ A procedure is an explicit sequence of steps triggered by an external event. Con
 ```ruby
 class OrdersController < ApplicationController
   def create
-    cart  = current_user.current_cart
+    cart = current_user.current_cart
     @form = OrderForm.new(cart, order_params)
-    if @form.valid?
-      ActiveRecord::Base.transaction do
-        @form.order.save!
-        cart.complete!
-      end
-      NotifyPurchaserJob.perform_later(@form.order)
-      NotifyMerchantJob.perform_later(@form.order)
-      redirect_to @form.order
-    else
+    unless @form.valid?
       render :new
     end
+
+    ActiveRecord::Base.transaction do
+      @form.order.save!
+      cart.complete!
+    end
+    
+    NotifyPurchaserJob.perform_later(@form.order)
+    NotifyMerchantJob.perform_later(@form.order)
+    
+    redirect_to @form.order
   end
 end
 ```
@@ -60,8 +62,9 @@ A job follows the same shape:
 ```ruby
 class SendWeeklyDigestJob < ApplicationJob
   def perform(user_id)
-    user   = User.find(user_id)
+    user = User.find(user_id)
     digest = DigestQuery.new(user).call
+
     DigestMailer.weekly(user, digest).deliver_now if digest.any?
   end
 end
@@ -90,7 +93,7 @@ class OrderPolicy
   end
 
   def initialize(user, order)
-    @user  = user
+    @user = user
     @order = order
   end
 
@@ -110,10 +113,10 @@ class OrdersController < ApplicationController
     end
 
     if @order.update(order_params)
-      redirect_to @order
-    else
-      render :edit
-    end
+      return redirect_to @order
+    end 
+    
+    render :edit
   end
 end
 ```
@@ -181,18 +184,20 @@ class OrdersController < ApplicationController
   def create
     cart  = current_user.current_cart
     @form = OrderWithPaymentForm.new(cart, Payment.new, order_params)
-    if @form.valid?
-      ActiveRecord::Base.transaction do
-        @form.order.save!
-        @form.payment.save!
-        cart.complete!
-      end
-      NotifyPurchaserJob.perform_later(@form.order)
-      NotifyMerchantJob.perform_later(@form.order)
-      redirect_to @form.order
-    else
-      render :new
+    if !@form.valid?
+      return render :new
     end
+
+    ActiveRecord::Base.transaction do
+      @form.order.save!
+      @form.payment.save!
+      cart.complete!
+    end
+    
+    NotifyPurchaserJob.perform_later(@form.order)
+    NotifyMerchantJob.perform_later(@form.order)
+    
+    redirect_to @form.order
   end
 end
 ```
@@ -216,6 +221,7 @@ ActiveRecord::Base.transaction do
   @form.order.save!   # essential
   cart.complete!      # essential
 end
+
 NotifyPurchaserJob.perform_later(@form.order)  # non-essential
 NotifyMerchantJob.perform_later(@form.order)   # non-essential
 ```
